@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "UnityLocalizationToolkit (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "UnityLocalizationToolkit (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

@@ -1,6 +1,8 @@
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using UnityLocalizationToolkit.Pages;
+using Windows.Graphics;
 
 namespace UnityLocalizationToolkit;
 
@@ -13,9 +15,28 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         
-        // 设置窗口最小尺寸
+        // 设置窗口尺寸
         var appWindow = this.AppWindow;
-        appWindow.Resize(new Windows.Graphics.SizeInt32(1200, 800));
+        appWindow.Resize(new SizeInt32(1200, 800));
+        
+        // 窗口居中显示
+        CenterWindow();
+        
+        // 设置自定义标题栏
+        ExtendsContentIntoTitleBar = true;
+        SetTitleBar(AppTitleBar);
+    }
+
+    /// <summary>
+    /// 将窗口居中显示在屏幕上
+    /// </summary>
+    private void CenterWindow()
+    {
+        var area = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Nearest)?.WorkArea;
+        if (area == null) return;
+        AppWindow.Move(new PointInt32(
+            (area.Value.Width - AppWindow.Size.Width) / 2,
+            (area.Value.Height - AppWindow.Size.Height) / 2));
     }
 
     /// <summary>
@@ -23,9 +44,9 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private void NavView_Loaded(object sender, RoutedEventArgs e)
     {
-        // 默认选中第一个菜单项
-        NavView.SelectedItem = TextTranslationItem;
-        ContentFrame.Navigate(typeof(TextTranslationPage));
+        // 默认选中主页
+        NavView.SelectedItem = HomeItem;
+        ContentFrame.Navigate(typeof(HomePage));
     }
 
     /// <summary>
@@ -48,6 +69,7 @@ public sealed partial class MainWindow : Window
     {
         var pageType = pageTag switch
         {
+            "HomePage" => typeof(HomePage),
             "TextTranslationPage" => typeof(TextTranslationPage),
             "FontReplacementPage" => typeof(FontReplacementPage),
             "SettingsPage" => typeof(SettingsPage),

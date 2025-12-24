@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Navigation;
 using Windows.Storage.Pickers;
 using UnityLocalizationToolkit.Models;
 using UnityLocalizationToolkit.Services;
@@ -12,11 +14,24 @@ using UnityLocalizationToolkit.Services;
 namespace UnityLocalizationToolkit.Pages;
 
 /// <summary>
+/// 扫描选项配置
+/// </summary>
+public class ScanOptions
+{
+    public bool ScanAssembly { get; set; } = true;
+    public bool ScanMonoBehaviour { get; set; } = true;
+    public bool ScanTextAsset { get; set; } = true;
+    public int MinTextLength { get; set; } = 2;
+    public bool UseEngineKeywords { get; set; } = true;
+    public HashSet<string> CustomKeywords { get; set; } = [];
+    public List<Regex> CustomPatterns { get; set; } = [];
+}
+
+/// <summary>
 /// 文本翻译页面 - 用于扫描、导出和导入游戏文本
 /// </summary>
 public sealed partial class TextTranslationPage : Page
 {
-    private GameProject? _currentProject;
     private CancellationTokenSource? _scanCancellation;
     private readonly ObservableCollection<TextEntry> _textEntries = [];
     private readonly ObservableCollection<TextEntry> _filteredEntries = [];
@@ -30,65 +45,85 @@ public sealed partial class TextTranslationPage : Page
     }
 
     /// <summary>
-    /// 选择游戏目录
+    /// 页面导航到时检查项目状态
     /// </summary>
-    private async void SelectFolderButton_Click(object sender, RoutedEventArgs e)
+    protected override void OnNavigatedTo(NavigationEventArgs e)
     {
-        var folderPicker = new FolderPicker();
-        folderPicker.SuggestedStartLocation = PickerLocationId.Desktop;
-        folderPicker.FileTypeFilter.Add("*");
+        base.OnNavigatedTo(e);
+        UpdateProjectStatus();
+    }
 
-        var window = App.MainWindow;
-        if (window != null)
+    /// <summary>
+    /// 更新项目状态显示
+    /// </summary>
+    private void UpdateProjectStatus()
+    {
+        var project = GameProjectService.Instance.CurrentProject;
+        
+        if (project != null && project.IsValid)
         {
-            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
-            WinRT.Interop.InitializeWithWindow.Initialize(folderPicker, hwnd);
+            ProjectStatusInfoBar.Title = $"当前项目: {GameProjectService.GetBackendDisplayName(project.BackendType)}";
+            ProjectStatusInfoBar.Message = project.RootPath;
+            ProjectStatusInfoBar.Severity = InfoBarSeverity.Success;
+            ScanButton.IsEnabled = true;
         }
-
-        var folder = await folderPicker.PickSingleFolderAsync();
-        if (folder != null)
+        else
         {
-            GamePathTextBox.Text = folder.Path;
-            
-            // 加载项目
-            _currentProject = GameProjectService.Instance.LoadProject(folder.Path);
-            
-            // 更新后端类型显示
-            if (_currentProject.IsValid)
-            {
-                BackendInfoBar.Title = "后端类型";
-                BackendInfoBar.Message = GameProjectService.GetBackendDisplayName(_currentProject.BackendType);
-                BackendInfoBar.Severity = InfoBarSeverity.Success;
-                ScanButton.IsEnabled = true;
-            }
-            else
-            {
-                BackendInfoBar.Title = "警告";
-                BackendInfoBar.Message = "未能识别Unity游戏目录";
-                BackendInfoBar.Severity = InfoBarSeverity.Warning;
-                ScanButton.IsEnabled = false;
-            }
+            ProjectStatusInfoBar.Title = "提示";
+            ProjectStatusInfoBar.Message = "请先在主页中选择游戏目录";
+            ProjectStatusInfoBar.Severity = InfoBarSeverity.Warning;
+            ScanButton.IsEnabled = false;
         }
     }
 
     /// <summary>
-    /// 获取当前选择的源语言
+    /// 从UI收集扫描选项
     /// </summary>
-    private SourceLanguage GetSelectedSourceLanguage()
+    private ScanOptions CollectScanOptions()
     {
-        if (SourceLanguageComboBox.SelectedItem is ComboBoxItem item)
+        var options = new ScanOptions
         {
-            return item.Tag?.ToString() switch
+            ScanAssembly = ScanAssemblyCheckBox.IsChecked ?? true,
+            ScanMonoBehaviour = ScanMonoBehaviourCheckBox.IsChecked ?? true,
+            ScanTextAsset = ScanTextAssetCheckBox.IsChecked ?? true,
+            MinTextLength = (int)(MinTextLengthBox.Value is double.NaN ? 2 : MinTextLengthBox.Value),
+            UseEngineKeywords = UseEngineKeywordsCheckBox.IsChecked ?? true
+        };
+
+        // 解析自定义排除关键字
+        if (!string.IsNullOrWhiteSpace(CustomKeywordsTextBox.Text))
+        {
+            var keywords = CustomKeywordsTextBox.Text
+                .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+                .Select(k => k.Trim())
+                .Where(k => !string.IsNullOrEmpty(k));
+            foreach (var keyword in keywords)
             {
-                "ja" => SourceLanguage.Japanese,
-                "en" => SourceLanguage.English,
-                "ko" => SourceLanguage.Korean,
-                "zh-CN" => SourceLanguage.ChineseSimplified,
-                "zh-TW" => SourceLanguage.ChineseTraditional,
-                _ => SourceLanguage.Other
-            };
+                options.CustomKeywords.Add(keyword);
+            }
         }
-        return SourceLanguage.Japanese;
+
+        // 解析自定义正则表达式
+        if (!string.IsNullOrWhiteSpace(CustomPatternsTextBox.Text))
+        {
+            var patterns = CustomPatternsTextBox.Text
+                .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+                .Select(p => p.Trim())
+                .Where(p => !string.IsNullOrEmpty(p));
+            foreach (var pattern in patterns)
+            {
+                try
+                {
+                    options.CustomPatterns.Add(new Regex(pattern, RegexOptions.Compiled));
+                }
+                catch
+                {
+                    // 忽略无效的正则表达式
+                }
+            }
+        }
+
+        return options;
     }
 
     /// <summary>
@@ -96,7 +131,8 @@ public sealed partial class TextTranslationPage : Page
     /// </summary>
     private async void ScanButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_currentProject == null) return;
+        var currentProject = GameProjectService.Instance.CurrentProject;
+        if (currentProject == null) return;
 
         _scanCancellation = new CancellationTokenSource();
         ScanButton.IsEnabled = false;
@@ -107,8 +143,9 @@ public sealed partial class TextTranslationPage : Page
 
         try
         {
-            var sourceLanguage = GetSelectedSourceLanguage();
-            var entries = await TextScannerService.Instance.ScanAsync(_currentProject, sourceLanguage, _scanCancellation.Token);
+            var sourceLanguage = GameProjectService.Instance.CurrentSourceLanguage;
+            var scanOptions = CollectScanOptions();
+            var entries = await TextScannerService.Instance.ScanAsync(currentProject, sourceLanguage, scanOptions, _scanCancellation.Token);
 
             // 更新数据
             _textEntries.Clear();
@@ -327,7 +364,8 @@ public sealed partial class TextTranslationPage : Page
     /// </summary>
     private async void ApplyButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_currentProject == null) return;
+        var currentProject = GameProjectService.Instance.CurrentProject;
+        if (currentProject == null) return;
 
         try
         {
@@ -337,7 +375,7 @@ public sealed partial class TextTranslationPage : Page
             ExportImportInfoBar.Severity = InfoBarSeverity.Informational;
             ExportImportInfoBar.IsOpen = true;
 
-            var modifiedCount = await AssetModifierService.Instance.ApplyTextTranslationsAsync(_currentProject, [.. _textEntries]);
+            var modifiedCount = await AssetModifierService.Instance.ApplyTextTranslationsAsync(currentProject, [.. _textEntries]);
 
             ExportImportInfoBar.Title = "应用成功";
             ExportImportInfoBar.Message = $"已成功修改 {modifiedCount} 条文本，原文件已备份";

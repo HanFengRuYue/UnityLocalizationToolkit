@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using UnityLocalizationToolkit.Pages;
 
 namespace UnityLocalizationToolkit.Models;
 
@@ -15,7 +16,11 @@ public enum SourceLanguage
     Korean,
     ChineseSimplified,
     ChineseTraditional,
-    Other
+    Other,
+    /// <summary>
+    /// 不过滤任何语言，扫描所有字符串
+    /// </summary>
+    NoFilter
 }
 
 /// <summary>
@@ -98,6 +103,7 @@ public static partial class LanguageFilter
     {
         return language switch
         {
+            SourceLanguage.NoFilter => true, // 不过滤，返回所有文本
             SourceLanguage.Japanese => ContainsJapanese(text),
             SourceLanguage.Korean => ContainsKorean(text),
             SourceLanguage.ChineseSimplified or SourceLanguage.ChineseTraditional => ContainsChinese(text),
@@ -148,7 +154,17 @@ public static partial class LanguageFilter
     /// </summary>
     public static bool ShouldSkipTranslation(string text, out string reason)
     {
+        return ShouldSkipTranslation(text, out reason, null);
+    }
+
+    /// <summary>
+    /// 检查文本是否应该跳过翻译（带扫描选项）
+    /// </summary>
+    public static bool ShouldSkipTranslation(string text, out string reason, ScanOptions? options)
+    {
         reason = string.Empty;
+        var minLength = options?.MinTextLength ?? 2;
+        var useEngineKeywords = options?.UseEngineKeywords ?? true;
 
         // 空文本
         if (string.IsNullOrWhiteSpace(text))
@@ -158,16 +174,23 @@ public static partial class LanguageFilter
         }
 
         // 太短
-        if (text.Length < 2)
+        if (text.Length < minLength)
         {
             reason = "文本太短";
             return true;
         }
 
         // 引擎关键字
-        if (EngineKeywords.Contains(text))
+        if (useEngineKeywords && EngineKeywords.Contains(text))
         {
             reason = "引擎保留关键字";
+            return true;
+        }
+
+        // 自定义排除关键字
+        if (options?.CustomKeywords != null && options.CustomKeywords.Contains(text))
+        {
+            reason = "自定义排除关键字";
             return true;
         }
 
@@ -181,6 +204,19 @@ public static partial class LanguageFilter
             }
         }
 
+        // 自定义正则表达式
+        if (options?.CustomPatterns != null)
+        {
+            foreach (var regex in options.CustomPatterns)
+            {
+                if (regex.IsMatch(text))
+                {
+                    reason = "匹配自定义正则表达式";
+                    return true;
+                }
+            }
+        }
+
         return false;
     }
 
@@ -189,8 +225,16 @@ public static partial class LanguageFilter
     /// </summary>
     public static bool IsLikelyGameText(string text, SourceLanguage sourceLanguage)
     {
+        return IsLikelyGameText(text, sourceLanguage, null);
+    }
+
+    /// <summary>
+    /// 判断文本是否可能是游戏文本（需要翻译，带扫描选项）
+    /// </summary>
+    public static bool IsLikelyGameText(string text, SourceLanguage sourceLanguage, ScanOptions? options)
+    {
         // 首先检查是否应该跳过
-        if (ShouldSkipTranslation(text, out _))
+        if (ShouldSkipTranslation(text, out _, options))
         {
             return false;
         }

@@ -4,12 +4,14 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AssetsTools.NET;
 using AssetsTools.NET.Extra;
 using Mono.Cecil;
 using UnityLocalizationToolkit.Models;
+using UnityLocalizationToolkit.Pages;
 
 namespace UnityLocalizationToolkit.Services;
 
@@ -33,6 +35,11 @@ public class TextScannerService
     /// 扫描到的文本条目列表
     /// </summary>
     public List<TextEntry> TextEntries { get; } = [];
+
+    /// <summary>
+    /// 当前扫描选项
+    /// </summary>
+    private ScanOptions? _currentOptions;
 
     public TextScannerService()
     {
@@ -62,9 +69,10 @@ public class TextScannerService
     /// <summary>
     /// 开始扫描游戏文本
     /// </summary>
-    public async Task<List<TextEntry>> ScanAsync(GameProject project, SourceLanguage sourceLanguage, CancellationToken cancellationToken = default)
+    public async Task<List<TextEntry>> ScanAsync(GameProject project, SourceLanguage sourceLanguage, ScanOptions options, CancellationToken cancellationToken = default)
     {
         _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _currentOptions = options;
         TextEntries.Clear();
 
         Trace.WriteLine($"[TextScanner] ========== Starting text scan ==========");
@@ -74,12 +82,15 @@ public class TextScannerService
         Trace.WriteLine($"[TextScanner] Asset files count: {project.AssetFiles.Count}");
         Trace.WriteLine($"[TextScanner] Bundle files count: {project.BundleFiles.Count}");
         Trace.WriteLine($"[TextScanner] Source language: {sourceLanguage}");
+        Trace.WriteLine($"[TextScanner] Scan options - Assembly: {options.ScanAssembly}, MonoBehaviour: {options.ScanMonoBehaviour}, TextAsset: {options.ScanTextAsset}");
+        Trace.WriteLine($"[TextScanner] Scan options - MinLength: {options.MinTextLength}, UseEngineKeywords: {options.UseEngineKeywords}");
+        Trace.WriteLine($"[TextScanner] Scan options - CustomKeywords: {options.CustomKeywords.Count}, CustomPatterns: {options.CustomPatterns.Count}");
         Trace.WriteLine($"[TextScanner] classdata.tpk exists: {File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "classdata.tpk"))}");
 
         try
         {
             // 1. 扫描Assembly-CSharp.dll (Mono后端)
-            if (project.BackendType == UnityBackendType.Mono && !string.IsNullOrEmpty(project.AssemblyCSharpPath))
+            if (options.ScanAssembly && project.BackendType == UnityBackendType.Mono && !string.IsNullOrEmpty(project.AssemblyCSharpPath))
             {
                 Trace.WriteLine($"[TextScanner] Scanning Assembly-CSharp.dll: {project.AssemblyCSharpPath}");
                 ReportProgress(0, "正在扫描Assembly-CSharp.dll...");
@@ -201,7 +212,7 @@ public class TextScannerService
             {
                 if (instruction.OpCode.Code == Mono.Cecil.Cil.Code.Ldstr && instruction.Operand is string str)
                 {
-                    if (LanguageFilter.IsLikelyGameText(str, sourceLanguage))
+                    if (LanguageFilter.IsLikelyGameText(str, sourceLanguage, _currentOptions))
                     {
                         var entry = new TextEntry
                         {
@@ -214,7 +225,7 @@ public class TextScannerService
                             Offset = instruction.Offset
                         };
 
-                        if (LanguageFilter.ShouldSkipTranslation(str, out var reason))
+                        if (LanguageFilter.ShouldSkipTranslation(str, out var reason, _currentOptions))
                         {
                             entry.ShouldSkip = true;
                             entry.SkipReason = reason;
@@ -361,13 +372,13 @@ public class TextScannerService
             try
             {
                 // 扫描TextAsset
-                if (info.TypeId == (int)AssetClassID.TextAsset)
+                if (info.TypeId == (int)AssetClassID.TextAsset && (_currentOptions?.ScanTextAsset ?? true))
                 {
                     textAssetCount++;
                     ScanTextAsset(fileInst, info, sourceLanguage);
                 }
                 // 扫描MonoBehaviour
-                else if (info.TypeId == (int)AssetClassID.MonoBehaviour)
+                else if (info.TypeId == (int)AssetClassID.MonoBehaviour && (_currentOptions?.ScanMonoBehaviour ?? true))
                 {
                     monoBehaviourCount++;
                     ScanMonoBehaviour(fileInst, info, sourceLanguage);
@@ -401,7 +412,7 @@ public class TextScannerService
             // 尝试将数据解释为文本
             var text = Encoding.UTF8.GetString(scriptData);
             
-            if (LanguageFilter.IsLikelyGameText(text, sourceLanguage))
+            if (LanguageFilter.IsLikelyGameText(text, sourceLanguage, _currentOptions))
             {
                 var entry = new TextEntry
                 {
@@ -413,7 +424,7 @@ public class TextScannerService
                     FieldPath = name
                 };
 
-                if (LanguageFilter.ShouldSkipTranslation(text, out var reason))
+                if (LanguageFilter.ShouldSkipTranslation(text, out var reason, _currentOptions))
                 {
                     entry.ShouldSkip = true;
                     entry.SkipReason = reason;
@@ -485,7 +496,7 @@ public class TextScannerService
         if (field.TypeName == "string" && field.Value != null)
         {
             var text = field.AsString;
-            if (!string.IsNullOrEmpty(text) && LanguageFilter.IsLikelyGameText(text, sourceLanguage))
+            if (!string.IsNullOrEmpty(text) && LanguageFilter.IsLikelyGameText(text, sourceLanguage, _currentOptions))
             {
                 var entry = new TextEntry
                 {
@@ -497,7 +508,7 @@ public class TextScannerService
                     FieldPath = currentPath
                 };
 
-                if (LanguageFilter.ShouldSkipTranslation(text, out var reason))
+                if (LanguageFilter.ShouldSkipTranslation(text, out var reason, _currentOptions))
                 {
                     entry.ShouldSkip = true;
                     entry.SkipReason = reason;

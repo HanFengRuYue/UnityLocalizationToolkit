@@ -21,6 +21,11 @@ public class GameProjectService
     public GameProject? CurrentProject { get; private set; }
 
     /// <summary>
+    /// 当前选择的源语言
+    /// </summary>
+    public SourceLanguage CurrentSourceLanguage { get; set; } = SourceLanguage.NoFilter;
+
+    /// <summary>
     /// 从目录加载游戏项目
     /// </summary>
     /// <param name="path">游戏根目录路径</param>

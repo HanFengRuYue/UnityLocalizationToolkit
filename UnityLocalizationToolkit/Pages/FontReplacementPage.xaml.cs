@@ -1,9 +1,9 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Runtime.InteropServices;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Navigation;
 using Windows.Storage.Pickers;
 using UnityLocalizationToolkit.Models;
 using UnityLocalizationToolkit.Services;
@@ -15,7 +15,6 @@ namespace UnityLocalizationToolkit.Pages;
 /// </summary>
 public sealed partial class FontReplacementPage : Page
 {
-    private GameProject? _currentProject;
     private FontAsset? _selectedFont;
     private readonly ObservableCollection<FontAsset> _fontAssets = [];
     private readonly ObservableCollection<FontAsset> _filteredFonts = [];
@@ -30,33 +29,34 @@ public sealed partial class FontReplacementPage : Page
     }
 
     /// <summary>
-    /// 选择游戏目录
+    /// 页面导航到时检查项目状态
     /// </summary>
-    private async void SelectFolderButton_Click(object sender, RoutedEventArgs e)
+    protected override void OnNavigatedTo(NavigationEventArgs e)
     {
-        var folderPicker = new FolderPicker();
-        folderPicker.SuggestedStartLocation = PickerLocationId.Desktop;
-        folderPicker.FileTypeFilter.Add("*");
+        base.OnNavigatedTo(e);
+        UpdateProjectStatus();
+    }
 
-        var window = App.MainWindow;
-        if (window != null)
+    /// <summary>
+    /// 更新项目状态显示
+    /// </summary>
+    private void UpdateProjectStatus()
+    {
+        var project = GameProjectService.Instance.CurrentProject;
+        
+        if (project != null && project.IsValid)
         {
-            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
-            WinRT.Interop.InitializeWithWindow.Initialize(folderPicker, hwnd);
+            ProjectStatusInfoBar.Title = $"当前项目: {GameProjectService.GetBackendDisplayName(project.BackendType)}";
+            ProjectStatusInfoBar.Message = project.RootPath;
+            ProjectStatusInfoBar.Severity = InfoBarSeverity.Success;
+            ScanFontsButton.IsEnabled = true;
         }
-
-        var folder = await folderPicker.PickSingleFolderAsync();
-        if (folder != null)
+        else
         {
-            GamePathTextBox.Text = folder.Path;
-            
-            // 加载项目（如果尚未加载或路径不同）
-            if (_currentProject == null || _currentProject.RootPath != folder.Path)
-            {
-                _currentProject = GameProjectService.Instance.LoadProject(folder.Path);
-            }
-            
-            ScanFontsButton.IsEnabled = _currentProject.IsValid;
+            ProjectStatusInfoBar.Title = "提示";
+            ProjectStatusInfoBar.Message = "请先在主页中选择游戏目录";
+            ProjectStatusInfoBar.Severity = InfoBarSeverity.Warning;
+            ScanFontsButton.IsEnabled = false;
         }
     }
 
@@ -65,13 +65,14 @@ public sealed partial class FontReplacementPage : Page
     /// </summary>
     private async void ScanFontsButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_currentProject == null) return;
+        var currentProject = GameProjectService.Instance.CurrentProject;
+        if (currentProject == null) return;
 
         ScanFontsButton.IsEnabled = false;
 
         try
         {
-            var fonts = await FontScannerService.Instance.ScanAsync(_currentProject);
+            var fonts = await FontScannerService.Instance.ScanAsync(currentProject);
 
             _fontAssets.Clear();
             foreach (var font in fonts)
@@ -80,7 +81,6 @@ public sealed partial class FontReplacementPage : Page
             }
 
             UpdateFontListView();
-            FontCountBadge.Value = _fontAssets.Count;
         }
         catch (Exception ex)
         {
@@ -153,6 +153,21 @@ public sealed partial class FontReplacementPage : Page
 
         FontListView.ItemsSource = _filteredFonts;
         FontListView.ItemTemplate = CreateFontEntryTemplate();
+        
+        // 更新字体计数徽章为筛选后的数量
+        FontCountBadge.Value = _filteredFonts.Count;
+    }
+
+    /// <summary>
+    /// 字体类型筛选变化
+    /// </summary>
+    private void FontTypeFilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        // 仅当有字体数据时更新列表
+        if (_fontAssets.Count > 0)
+        {
+            UpdateFontListView();
+        }
     }
 
     /// <summary>

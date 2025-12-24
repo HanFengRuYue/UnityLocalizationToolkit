@@ -14,15 +14,40 @@
     </Window.SystemBackdrop>
 
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="32"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- 自定义标题栏 -->
+        <Border x:Name="AppTitleBar" Grid.Row="0" VerticalAlignment="Stretch">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                <FontIcon Glyph="&#xE943;" FontSize="16" Margin="0,0,12,0"/>
+                <TextBlock Text="Unity本地化工具箱" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+        
         <NavigationView 
             x:Name="NavView"
+            Grid.Row="1"
             IsBackButtonVisible="Collapsed"
             IsSettingsVisible="False"
             PaneDisplayMode="Left"
+            OpenPaneLength="200"
+            CompactPaneLength="48"
             SelectionChanged="NavView_SelectionChanged"
             Loaded="NavView_Loaded">
             
             <NavigationView.MenuItems>
+                <NavigationViewItem 
+                    x:Name="HomeItem"
+                    Content="主页" 
+                    Tag="HomePage">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE80F;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                
                 <NavigationViewItem 
                     x:Name="TextTranslationItem"
                     Content="修改游戏文本" 

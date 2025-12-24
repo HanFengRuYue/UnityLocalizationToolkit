@@ -17,34 +17,14 @@
                 Text="修改游戏字体" 
                 Style="{StaticResource TitleTextBlockStyle}" />
             
-            <!-- 项目选择区域 -->
-            <Expander IsExpanded="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-                <Expander.Header>
-                    <TextBlock Text="项目设置" Style="{StaticResource SubtitleTextBlockStyle}" />
-                </Expander.Header>
-                <StackPanel Spacing="16" Padding="0,16,0,0">
-                    <Grid ColumnSpacing="16">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        
-                        <TextBox 
-                            x:Name="GamePathTextBox"
-                            Grid.Column="0"
-                            Header="游戏目录"
-                            PlaceholderText="选择Unity游戏的根目录..."
-                            IsReadOnly="True" />
-                        
-                        <Button 
-                            x:Name="SelectFolderButton"
-                            Grid.Column="1"
-                            Content="选择目录"
-                            VerticalAlignment="Bottom"
-                            Click="SelectFolderButton_Click" />
-                    </Grid>
-                </StackPanel>
-            </Expander>
+            <!-- 项目状态提示 -->
+            <InfoBar 
+                x:Name="ProjectStatusInfoBar"
+                Title="提示"
+                Message="请先在主页中选择游戏目录"
+                Severity="Warning"
+                IsOpen="True"
+                IsClosable="False" />
             
             <!-- 字体扫描区域 -->
             <Expander IsExpanded="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
@@ -63,7 +43,8 @@
                         <ComboBox 
                             x:Name="FontTypeFilterComboBox"
                             Header="字体类型筛选"
-                            SelectedIndex="0">
+                            SelectedIndex="0"
+                            SelectionChanged="FontTypeFilterComboBox_SelectionChanged">
                             <ComboBoxItem Content="全部" Tag="All" />
                             <ComboBoxItem Content="传统字体" Tag="Traditional" />
                             <ComboBoxItem Content="TMP字体" Tag="TMP" />

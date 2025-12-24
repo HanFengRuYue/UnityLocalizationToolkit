@@ -1,31 +1,62 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
+using UnityLocalizationToolkit.Pages;
 
-// To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
+namespace UnityLocalizationToolkit;
 
-namespace UnityLocalizationToolkit
+/// <summary>
+/// 主窗口 - 包含导航视图和内容框架
+/// </summary>
+public sealed partial class MainWindow : Window
 {
-    /// <summary>
-    /// An empty window that can be used on its own or navigated to within a Frame.
-    /// </summary>
-    public sealed partial class MainWindow : Window
+    public MainWindow()
     {
-        public MainWindow()
+        InitializeComponent();
+        
+        // 设置窗口最小尺寸
+        var appWindow = this.AppWindow;
+        appWindow.Resize(new Windows.Graphics.SizeInt32(1200, 800));
+    }
+
+    /// <summary>
+    /// 导航视图加载完成时调用
+    /// </summary>
+    private void NavView_Loaded(object sender, RoutedEventArgs e)
+    {
+        // 默认选中第一个菜单项
+        NavView.SelectedItem = TextTranslationItem;
+        ContentFrame.Navigate(typeof(TextTranslationPage));
+    }
+
+    /// <summary>
+    /// 导航项选择改变时调用
+    /// </summary>
+    private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
+    {
+        if (args.SelectedItemContainer is NavigationViewItem selectedItem)
         {
-            InitializeComponent();
+            var tag = selectedItem.Tag?.ToString();
+            NavigateToPage(tag);
+        }
+    }
+
+    /// <summary>
+    /// 根据标签导航到对应页面
+    /// </summary>
+    /// <param name="pageTag">页面标签</param>
+    private void NavigateToPage(string? pageTag)
+    {
+        var pageType = pageTag switch
+        {
+            "TextTranslationPage" => typeof(TextTranslationPage),
+            "FontReplacementPage" => typeof(FontReplacementPage),
+            "SettingsPage" => typeof(SettingsPage),
+            _ => null
+        };
+
+        if (pageType != null && ContentFrame.CurrentSourcePageType != pageType)
+        {
+            ContentFrame.Navigate(pageType);
         }
     }
 }

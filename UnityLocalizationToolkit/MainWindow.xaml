@@ -7,13 +7,53 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    Title="UnityLocalizationToolkit">
+    Title="Unity本地化工具箱">
 
     <Window.SystemBackdrop>
         <MicaBackdrop />
     </Window.SystemBackdrop>
 
     <Grid>
-
+        <NavigationView 
+            x:Name="NavView"
+            IsBackButtonVisible="Collapsed"
+            IsSettingsVisible="False"
+            PaneDisplayMode="Left"
+            SelectionChanged="NavView_SelectionChanged"
+            Loaded="NavView_Loaded">
+            
+            <NavigationView.MenuItems>
+                <NavigationViewItem 
+                    x:Name="TextTranslationItem"
+                    Content="修改游戏文本" 
+                    Tag="TextTranslationPage">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE8AC;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                
+                <NavigationViewItem 
+                    x:Name="FontReplacementItem"
+                    Content="修改游戏字体" 
+                    Tag="FontReplacementPage">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE8D2;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+            
+            <NavigationView.FooterMenuItems>
+                <NavigationViewItem 
+                    x:Name="SettingsItem"
+                    Content="设置" 
+                    Tag="SettingsPage">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE713;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.FooterMenuItems>
+            
+            <Frame x:Name="ContentFrame" />
+        </NavigationView>
     </Grid>
 </Window>

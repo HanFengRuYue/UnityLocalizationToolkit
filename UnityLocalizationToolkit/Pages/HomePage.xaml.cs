@@ -63,7 +63,6 @@ public sealed partial class HomePage : Page
             // 更新后端类型显示
             if (project.IsValid)
             {
-                BackendInfoBar.Title = "后端类型";
                 BackendInfoBar.Message = GameProjectService.GetBackendDisplayName(project.BackendType);
                 BackendInfoBar.Severity = InfoBarSeverity.Success;
                 
@@ -80,7 +79,6 @@ public sealed partial class HomePage : Page
             }
             else
             {
-                BackendInfoBar.Title = "警告";
                 BackendInfoBar.Message = "未能识别Unity游戏目录";
                 BackendInfoBar.Severity = InfoBarSeverity.Warning;
                 
@@ -91,7 +89,6 @@ public sealed partial class HomePage : Page
         }
         else
         {
-            BackendInfoBar.Title = "后端类型";
             BackendInfoBar.Message = "请先选择游戏目录";
             BackendInfoBar.Severity = InfoBarSeverity.Informational;
             

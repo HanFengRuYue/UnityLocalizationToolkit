@@ -49,27 +49,45 @@
                             Click="SelectFolderButton_Click" />
                     </Grid>
                     
-                    <Grid ColumnSpacing="16">
+                    <Grid ColumnSpacing="16" RowSpacing="8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            Text="后端类型"
+                            Style="{StaticResource CaptionTextBlockStyle}" />
+
+                        <TextBlock
+                            Grid.Row="0"
+                            Grid.Column="1"
+                            Text="源语言（游戏原始语言）"
+                            Style="{StaticResource CaptionTextBlockStyle}" />
                         
                         <InfoBar 
                             x:Name="BackendInfoBar"
+                            Grid.Row="1"
                             Grid.Column="0"
-                            Title="后端类型"
                             Message="请先选择游戏目录"
                             Severity="Informational"
                             IsOpen="True"
+                            VerticalAlignment="Stretch"
                             IsClosable="False" />
                         
                         <ComboBox 
                             x:Name="SourceLanguageComboBox"
+                            Grid.Row="1"
                             Grid.Column="1"
-                            Header="源语言（游戏原始语言）"
                             HorizontalAlignment="Stretch"
                             SelectedIndex="6"
+                            VerticalAlignment="Stretch"
                             SelectionChanged="SourceLanguageComboBox_SelectionChanged">
                             <ComboBoxItem Content="日语" Tag="ja" />
                             <ComboBoxItem Content="英语" Tag="en" />
@@ -148,51 +166,6 @@
                             </StackPanel>
                         </Button>
                     </StackPanel>
-                </StackPanel>
-            </Expander>
-            
-            <!-- 使用说明 -->
-            <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-                <Expander.Header>
-                    <TextBlock Text="使用说明" Style="{StaticResource SubtitleTextBlockStyle}" />
-                </Expander.Header>
-                <StackPanel Spacing="12" Padding="0,16,0,0">
-                    <TextBlock 
-                        Text="Unity本地化工具箱使用步骤："
-                        FontWeight="SemiBold" />
-                    
-                    <Grid ColumnSpacing="16" RowSpacing="8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        
-                        <Border Grid.Row="0" Grid.Column="0" Background="{ThemeResource AccentFillColorDefaultBrush}" CornerRadius="12" Width="24" Height="24" HorizontalAlignment="Center">
-                            <TextBlock Text="1" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold" />
-                        </Border>
-                        <TextBlock Grid.Row="0" Grid.Column="1" Text="在上方选择Unity游戏的根目录（包含.exe文件的目录）" VerticalAlignment="Center" />
-                        
-                        <Border Grid.Row="1" Grid.Column="0" Background="{ThemeResource AccentFillColorDefaultBrush}" CornerRadius="12" Width="24" Height="24" HorizontalAlignment="Center">
-                            <TextBlock Text="2" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold" />
-                        </Border>
-                        <TextBlock Grid.Row="1" Grid.Column="1" Text="选择游戏的原始语言（如日语、英语等）" VerticalAlignment="Center" />
-                        
-                        <Border Grid.Row="2" Grid.Column="0" Background="{ThemeResource AccentFillColorDefaultBrush}" CornerRadius="12" Width="24" Height="24" HorizontalAlignment="Center">
-                            <TextBlock Text="3" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold" />
-                        </Border>
-                        <TextBlock Grid.Row="2" Grid.Column="1" Text="进入【修改游戏文本】扫描并导出文本，翻译后导入应用" VerticalAlignment="Center" />
-                        
-                        <Border Grid.Row="3" Grid.Column="0" Background="{ThemeResource AccentFillColorDefaultBrush}" CornerRadius="12" Width="24" Height="24" HorizontalAlignment="Center">
-                            <TextBlock Text="4" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold" />
-                        </Border>
-                        <TextBlock Grid.Row="3" Grid.Column="1" Text="进入【修改游戏字体】扫描并替换游戏字体" VerticalAlignment="Center" />
-                    </Grid>
                 </StackPanel>
             </Expander>
             
